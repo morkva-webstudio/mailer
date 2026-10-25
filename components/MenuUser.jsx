@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { askToSignOut } from "@/lib/sign-out";
 import { cn } from "@/lib/utils";
+import { withBasePath } from "@/lib/base-path";
 
 // The bottom of the sidebar and of the mobile menu: who's signed in and whether the account sends, with what
 // concerns the whole account rather than one newsletter. status: getSendingStatus (lib/account-state.js). items: the
@@ -73,7 +74,7 @@ export default function MenuUser({ name, email, image, gravatarHash, status, has
 				)}
 				{items}
 				<DropdownMenuItem asChild>
-					<a href="/help" target="_blank" rel="noopener">
+					<a href={withBasePath("/help")} target="_blank" rel="noopener">
 						<CircleHelp />
 						Help
 					</a>

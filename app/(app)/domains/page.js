@@ -32,6 +32,7 @@ import { refreshSharedSender } from "@/lib/shared-sender";
 import { cn } from "@/lib/utils";
 import Domain from "@/models/Domain";
 import Newsletter from "@/models/Newsletter";
+import { withBasePath } from "@/lib/base-path";
 
 export const metadata = { title: "Domains" };
 
@@ -96,7 +97,7 @@ export default async function DomainsPage() {
 						{hasVerifiedDomain && (
 							<RowNote
 								href="https://postmaster.google.com/v2/"
-								icon={<Image src="/logos/postmaster-tools.webp" alt="" width={20} height={20} loading="lazy" unoptimized />}
+								icon={<Image src={withBasePath("/logos/postmaster-tools.webp")} alt="" width={20} height={20} loading="lazy" unoptimized />}
 								label="Postmaster Tools"
 								detail="See how Gmail rates your domain"
 								end={<ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />}

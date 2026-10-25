@@ -3,6 +3,8 @@ import { getClientIp, isRateLimited } from "@/lib/rate-limit";
 import { getSummarySettingsPath } from "@/lib/summary-links";
 import { saveSummaryFrequency } from "@/lib/summary-send";
 import { verifySummarySettingsToken } from "@/lib/summary-token";
+import { withBasePath } from "@/lib/base-path";
+import { getAppUrl } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
@@ -26,5 +28,5 @@ export async function POST(request) {
 // Opened in a browser instead: the page where it can be changed, with a button, so link scanners change nothing.
 export async function GET(request) {
 	const token = new URL(request.url).searchParams.get("token");
-	return NextResponse.redirect(new URL(getSummarySettingsPath(encodeURIComponent(token ?? "")), request.url), { headers: NO_STORE });
+	return NextResponse.redirect(new URL(withBasePath(getSummarySettingsPath(encodeURIComponent(token ?? ""))), getAppUrl()), { headers: NO_STORE });
 }

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { readStoredNumber, storeValue } from "@/lib/storage";
+import { withBasePath } from "@/lib/base-path";
 
 const VIEW_WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -13,9 +14,9 @@ export default function TrackView({ issueId }) {
 		storeValue(key, Date.now());
 
 		const body = JSON.stringify({ id: issueId });
-		const isQueued = navigator.sendBeacon?.("/api/views", new Blob([body], { type: "application/json" }));
+		const isQueued = navigator.sendBeacon?.(withBasePath("/api/views"), new Blob([body], { type: "application/json" }));
 		if (!isQueued) {
-			fetch("/api/views", {
+			fetch(withBasePath("/api/views"), {
 				method: "POST",
 				body,
 				keepalive: true,

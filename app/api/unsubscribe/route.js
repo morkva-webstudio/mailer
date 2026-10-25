@@ -5,6 +5,8 @@ import { moveContact } from "@/lib/status-changes";
 import { verifyUnsubscribeToken } from "@/lib/unsubscribe";
 import Campaign from "@/models/Campaign";
 import Message from "@/models/Message";
+import { withBasePath } from "@/lib/base-path";
+import { getAppUrl } from "@/lib/config";
 
 const NO_STORE = { "Cache-Control": "no-store" };
 // Bounced and complained contacts stay as they are: those statuses also block sending.
@@ -59,7 +61,7 @@ async function unsubscribe({ contactId, newsletterId }, via) {
 }
 
 function redirectToPage(request, params) {
-	const url = new URL("/unsubscribe", request.url);
+	const url = new URL(withBasePath("/unsubscribe"), getAppUrl());
 	for (const [key, value] of Object.entries(params)) {
 		if (value) url.searchParams.set(key, value);
 	}

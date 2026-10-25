@@ -65,6 +65,13 @@ const AUTHOR_PATH_PATTERN = /^\/authors\/([a-z0-9][a-z0-9-]{0,59})\/?$/;
 // Generated share images stay on the app domain, where social cards point: they're only PNGs.
 const ARCHIVE_IMAGE_PATH_PATTERN = /^\/archive\/[^/]+\/og$/;
 
+function redirectTo(request, pathname) {
+	const url = request.nextUrl.clone();
+	url.pathname = pathname;
+	url.search = "";
+	return url;
+}
+
 function rewriteTo(request, pathname) {
 	const url = request.nextUrl.clone();
 	url.pathname = pathname;
@@ -104,19 +111,19 @@ export async function proxy(request) {
 	const { landingPath, publicPages, isPublicPath } = siteExtensions;
 	if (isCloud()) {
 		if (pathname === "/" && landingPath) return hasSession ? NextResponse.next() : rewriteTo(request, landingPath);
-		if (pathname === landingPath) return NextResponse.redirect(new URL("/", request.url), 308);
+		if (pathname === landingPath) return NextResponse.redirect(redirectTo(request, "/"), 308);
 		if (publicPages.includes(pathname) || isPublicPath(pathname)) return NextResponse.next();
 	} else if (pathname === landingPath || (pathname !== "/" && publicPages.includes(pathname))) {
 		return rewriteTo(request, NOT_FOUND_PATH);
 	}
 	if (PUBLIC_PATHS.some((pattern) => pattern.test(pathname))) return NextResponse.next();
 	if (hasSession) return NextResponse.next();
-	if (pathname === "/") return NextResponse.redirect(new URL("/signin", request.url));
+	if (pathname === "/") return NextResponse.redirect(redirectTo(request, "/signin"));
 
 	if (pathname.startsWith("/api/")) {
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
-	const signin = new URL("/signin", request.url);
+	const signin = redirectTo(request, "/signin");
 	signin.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
 	return NextResponse.redirect(signin);
 }

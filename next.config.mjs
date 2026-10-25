@@ -41,6 +41,10 @@ const SITE_EXTENSIONS = Object.entries({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+	// Served under a path of the domain (lib/base-path.js), read at build time.
+	...(process.env.NEXT_PUBLIC_BASE_PATH && { basePath: process.env.NEXT_PUBLIC_BASE_PATH.replace(/\/$/, "") }),
+	// deploy.sh builds into a directory of its own while the live one keeps serving.
+	...(process.env.NEXT_DIST_DIR && { distDir: process.env.NEXT_DIST_DIR }),
 	poweredByHeader: false,
 	turbopack: { resolveAlias: Object.fromEntries(SITE_EXTENSIONS) },
 	// Read from disk by its route, so the build can't see it's needed.

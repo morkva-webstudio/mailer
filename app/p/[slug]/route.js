@@ -4,6 +4,8 @@ import { connectDb } from "@/lib/db";
 import { findNewsletterAnywhere } from "@/lib/public-newsletters";
 import { WEB_FILTER } from "@/lib/publish-to";
 import Campaign from "@/models/Campaign";
+import { withBasePath } from "@/lib/base-path";
+import { getAppUrl } from "@/lib/config";
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{0,119}$/;
 
@@ -22,5 +24,5 @@ export async function GET(request, { params }) {
 	const newsletter = owner && (await getArchiveNewsletter(owner.slug));
 	if (!newsletter) return new Response("Not found", { status: 404 });
 
-	return Response.redirect(new URL(getArchiveUrls(newsletter).post(slug), request.url), 307);
+	return Response.redirect(new URL(withBasePath(getArchiveUrls(newsletter).post(slug)), getAppUrl()), 307);
 }
