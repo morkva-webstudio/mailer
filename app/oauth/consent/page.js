@@ -7,6 +7,7 @@ import FormConsent from "@/components/FormConsent";
 import LogoMailcheap from "@/components/LogoMailcheap";
 import { SiteAnalytics } from "@/components/SiteExtensions";
 import { hasActiveSubscription, isDeletionPending } from "@/lib/account-state";
+import { getConnectionAccess } from "@/lib/actions/define-action";
 import { getCurrentAccount } from "@/lib/auth";
 import { isCloud } from "@/lib/config";
 import { readOAuthRequest } from "@/lib/oauth";
@@ -19,9 +20,11 @@ const ACCESS = [
 	"Send campaigns to your subscribers",
 	"Create and revoke API keys, and open billing",
 ];
+// With OAUTH_ACCESS=drafts (lib/actions/define-action.js).
+const DRAFTS_ACCESS = ["Read your newsletter, campaigns, contacts, segments and reports", "Write campaign drafts and upload their images"];
 
 // Better Auth sends people here with the app's signed authorization request when it needs their consent (and
-// for prompt=select_account). The app gets the same access as a full access API key.
+// for prompt=select_account). The app gets the same access as a full access API key, or drafts only (OAUTH_ACCESS).
 export default async function ConsentPage({ searchParams }) {
 	const oauthRequest = await readOAuthRequest(await searchParams);
 	if (!oauthRequest || oauthRequest.isExpired) return <Expired />;
@@ -31,7 +34,9 @@ export default async function ConsentPage({ searchParams }) {
 
 	const { client, query, redirectUri, scopes } = oauthRequest;
 	const redirectHost = getHost(redirectUri);
-	const access = scopes.some((scope) => scope === "email" || scope === "profile") ? [...ACCESS, "See your name and email address"] : ACCESS;
+	const isDrafts = getConnectionAccess() === "drafts";
+	const lines = isDrafts ? DRAFTS_ACCESS : ACCESS;
+	const access = scopes.some((scope) => scope === "email" || scope === "profile") ? [...lines, "See your name and email address"] : lines;
 	const hasPlan = hasActiveSubscription(current.account);
 
 	return (
@@ -62,7 +67,9 @@ export default async function ConsentPage({ searchParams }) {
 								</li>
 							))}
 						</ul>
-						<p className="text-xs text-muted-foreground">The same access as a full access API key.</p>
+						<p className="text-xs text-muted-foreground">
+							{isDrafts ? "It can't send, schedule or delete anything." : "The same access as a full access API key."}
+						</p>
 					</div>
 					<form action={switchAccount} className="flex items-center justify-between gap-3 border-t border-border/60 bg-muted/40 px-4 py-2.5">
 						<input type="hidden" name="oauth_query" value={query} />

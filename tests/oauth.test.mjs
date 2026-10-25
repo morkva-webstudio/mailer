@@ -400,6 +400,32 @@ describe("connecting with the official MCP client", () => {
 		await client.close();
 	});
 
+	test("with OAUTH_ACCESS=drafts an app reads everything and writes drafts, but can't send, schedule or delete", async () => {
+		process.env.OAUTH_ACCESS = "drafts";
+		try {
+			const client = await connectApp(users.owner);
+			const names = (await client.listTools()).tools.map(({ name }) => name);
+			for (const name of ["list_contacts", "get_campaign_report", "export_contacts", "create_campaign", "update_campaign", "upload_image"]) {
+				assert.ok(names.includes(name), name);
+			}
+			for (const name of ["send_campaign", "schedule_campaign", "send_test_email", "delete_campaign", "create_segment", "tag_contacts", "create_api_key"]) {
+				assert.ok(!names.includes(name), name);
+			}
+			const draft = await client.callTool({ name: "create_campaign", arguments: { subject: "Drafted by Claude", content: "# Hi" } });
+			assert.ok(draft.structuredContent.id, JSON.stringify(draft));
+			const { runAction } = await import("../lib/actions/run-action.js");
+			const connection = { id: "000000000000000000000000", clientId: AGENT.clientId };
+			const account = await m.Account.findById(users.owner.accountId).lean();
+			await assert.rejects(
+				runAction("send_campaign", { account, connection, input: { id: draft.structuredContent.id }, via: "mcp" }),
+				(error) => error.code === "forbidden" && /drafts only/.test(error.message)
+			);
+			await client.close();
+		} finally {
+			delete process.env.OAUTH_ACCESS;
+		}
+	});
+
 	test("the consent page's request carries the app's name, its host and the redirect, signed", async () => {
 		const { challenge } = pkce();
 		const params = await openConsentPage(users.owner, authorizationUrl(AGENT, { challenge, prompt: "consent" }));

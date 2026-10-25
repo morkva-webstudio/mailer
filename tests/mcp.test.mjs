@@ -10,7 +10,7 @@ let owner;
 let stranger;
 let nextId = 0;
 
-async function mcp(key, method, params = {}, { route = m.mcpRoute, path = "/mcp" } = {}) {
+async function mcp(key, method, params = {}, { route = m.mcpRoute, path = "/mcp", headers = {} } = {}) {
 	const isNotification = method.startsWith("notifications/");
 	const request = new Request(`http://localhost:3000${path}`, {
 		method: "POST",
@@ -19,6 +19,7 @@ async function mcp(key, method, params = {}, { route = m.mcpRoute, path = "/mcp"
 			accept: "application/json, text/event-stream",
 			...(method !== "initialize" && { "mcp-protocol-version": "2025-06-18" }),
 			...(key && { authorization: `Bearer ${key}` }),
+			...headers,
 		},
 		body: JSON.stringify({ jsonrpc: "2.0", method, params, ...(!isNotification && { id: ++nextId }) }),
 	});
@@ -118,6 +119,19 @@ describe("connecting", () => {
 		const created = await m.ApiKey.findOne({ accountId: owner.accountId, name: "Short lived" }).lean();
 		await as(owner, () => m.apiKeys.revokeApiKey(String(created._id)));
 		assert.equal((await mcp(key, "tools/list")).status, 401, "a revoked key");
+	});
+
+	test("with MCP_API_KEYS=local a key works only on requests that didn't come through the proxy (X-Real-IP)", async () => {
+		process.env.MCP_API_KEYS = "local";
+		try {
+			assert.equal((await mcp(owner.fullKey, "tools/list")).status, 200, "straight to the app");
+			const { status, body } = await mcp(owner.fullKey, "tools/list", {}, { headers: { "x-real-ip": "203.0.113.7" } });
+			assert.equal(status, 401);
+			assert.match(body.error.message, /only from the server itself/);
+		} finally {
+			delete process.env.MCP_API_KEYS;
+		}
+		assert.equal((await mcp(owner.fullKey, "tools/list", {}, { headers: { "x-real-ip": "203.0.113.7" } })).status, 200, "unset: keys work from anywhere");
 	});
 
 	test("the official SDK client connects on the 2026-07-28 revision and with the 2025 handshake", async () => {
