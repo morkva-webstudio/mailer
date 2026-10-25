@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { getDomainSetup, getDomainSummary } from "../lib/domain-records.js";
 import {
 	getDomainProblem,
+	isReservedDomain,
 	getFromEmailSaveProblem,
 	getOwnDomainLocalPart,
 	getSharedAddress,
@@ -88,6 +89,15 @@ test("customers can't claim MailCheap's domains", () => {
 		assert.match(getDomainProblem(domain, options), /can't be added/, domain);
 	}
 	for (const domain of ["example", "-bad.com", "a..b.com", "exa mple.com"]) assert.match(getDomainProblem(domain, options), /Enter a domain/, domain);
+});
+
+test("a self-hosted server on a subdomain sends from its parent domain", () => {
+	const options = { sharedDomain: null, appHost: "marketing.example.com" };
+	assert.equal(isReservedDomain("example.com", { ...options, cloud: false }), false);
+	assert.equal(isReservedDomain("news.example.com", { ...options, cloud: false }), false);
+	assert.equal(isReservedDomain("marketing.example.com", { ...options, cloud: false }), true);
+	assert.equal(isReservedDomain("mail.marketing.example.com", { ...options, cloud: false }), true);
+	assert.equal(isReservedDomain("example.com", { ...options, cloud: true }), true);
 });
 
 test("with the app's own domain shared, <slug>.mailcheap.ai is the shared address and the rest of mailcheap.ai stays MailCheap's", () => {
