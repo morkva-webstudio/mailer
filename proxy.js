@@ -48,6 +48,8 @@ const PUBLIC_PATHS = [
 	/^\/api\/webhooks\//,
 	/^\/api\/jobs\//,
 	/^\/api\/cron\//,
+	// Behind the PIN hub's gateway, which is what checks who it is (app/api/hub-login).
+	/^\/api\/hub-login$/,
 ];
 
 // A newsletter's host carries its archive and the links in its emails, never the dashboard, not even its login page.
