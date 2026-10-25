@@ -2,6 +2,7 @@ import Link from "next/link";
 import BlockCode from "@/components/BlockCode";
 import HeaderDocs from "@/components/HeaderDocs";
 import LinkApp from "@/components/LinkApp";
+import { DRAFT_ACTIONS, getConnectionAccess } from "@/lib/actions/define-action";
 import { ACTION_GROUPS, ACTIONS } from "@/lib/actions/registry";
 import { getAppUrl } from "@/lib/config";
 import { getDocsPageMetadata } from "@/lib/docs/llms";
@@ -21,6 +22,12 @@ export default function McpPage() {
 	const clients = getMcpClients(appUrl);
 	const sendTools = ACTIONS.filter((action) => action.destructive && action.openWorld && action.group === "Campaigns");
 	const setups = connectors.length + clients.length;
+	// Where clients find the resource's metadata (RFC 9728): the MCP URL's path after /.well-known/oauth-protected-resource.
+	const { origin, pathname: mcpPath } = new URL(mcpUrl);
+	const resourceMetadataUrl = `${origin}/.well-known/oauth-protected-resource${mcpPath}`;
+	const isDrafts = getConnectionAccess() === "drafts";
+	// A server behind its own sign-in gateway (a PIN hub, app/api/hub-login) gets its guide in Ukrainian on top.
+	const hasHub = Boolean(process.env.HUB_BRIDGE_SECRET);
 
 	return (
 		<>
@@ -32,6 +39,8 @@ export default function McpPage() {
 
 			<div className="flex max-w-3xl flex-col gap-10">
 				<BlockCode title="Connector URL" code={mcpUrl} className="animate-enter" />
+
+				{hasHub && <ClaudeHubGuide mcpUrl={mcpUrl} isDrafts={isDrafts} isKeysLocal={process.env.MCP_API_KEYS === "local"} />}
 
 				{connectors.map(({ id, name, steps, note }, index) => (
 					<section key={id} id={id} style={{ "--stagger": index + 1 }} className="scroll-mt-20 animate-enter">
@@ -69,7 +78,9 @@ export default function McpPage() {
 				<section id="connected-apps" style={{ "--stagger": setups + 2 }} className="scroll-mt-20 animate-enter">
 					<h2 className="text-xl font-semibold tracking-tight">Connected apps</h2>
 					<p className="mt-2 text-[15px] leading-7 text-pretty text-foreground/80">
-						An app you allow gets the same access as a full access key, in your account only. The{" "}
+						{isDrafts
+							? `On this server an app you allow can only read and write campaign drafts (${DRAFT_ACTIONS.join(", ")}, and every read-only tool), in your account only: it can't send, schedule or delete anything. Keys keep their own access. The `
+							: "An app you allow gets the same access as a full access key, in your account only. The"}{" "}
 						<LinkApp href="/api-keys" className={LINK_CLASS}>
 							API keys page
 						</LinkApp>{" "}
@@ -121,7 +132,7 @@ export default function McpPage() {
 					</p>
 					<p className="mt-3 text-[15px] leading-7 text-pretty text-foreground/80">
 						OAuth follows the MCP authorization spec. A request without credentials gets a 401 pointing at{" "}
-						<code className="font-mono text-[13px]">/.well-known/oauth-protected-resource/mcp</code>, whose authorization server is{" "}
+						<code className="font-mono text-[13px]">{resourceMetadataUrl}</code>, whose authorization server is{" "}
 						<code className="font-mono text-[13px]">{appUrl}</code>. Apps identify themselves with a client metadata document (Grok Bot,
 						on Cursor&apos;s agents, registers instead), sign the user in with the authorization code flow and PKCE, and get tokens bound to{" "}
 						<code className="font-mono text-[13px]">{mcpUrl}</code>{" "}
@@ -131,6 +142,68 @@ export default function McpPage() {
 				</section>
 			</div>
 		</>
+	);
+}
+
+// This server's way in for Claude, in Ukrainian: sign-in goes through the PIN hub, and OAUTH_ACCESS may limit the app.
+function ClaudeHubGuide({ mcpUrl, isDrafts, isKeysLocal }) {
+	const steps = [
+		"Відкрийте хаб marketing.morkva.co.ua і увійдіть з PIN у браузері, де відбуватиметься підключення: там, де відкритий claude.ai, а для Claude Desktop у системному браузері за замовчуванням. На пристрої, не зареєстрованому в хабі, вхід не спрацює.",
+		"У claude.ai: Customize › Connectors › Add custom connector. Назва: Mailer, URL: адреса нижче. Client ID і secret не потрібні. Якщо Claude питає, як він себе ідентифікує, лишіть Use Claude's published identity. Натисніть Add.",
+		"Натисніть Connect. Відкриється сторінка Mailer «Claude will be able to…»: перевірте список і натисніть Allow.",
+		"Якщо замість неї відкрилася сторінка PIN, введіть PIN. Якщо після цього підключення не продовжилось, натисніть Connect у Claude ще раз.",
+		"У чаті: + › Connectors › Mailer. Конектор працює в claude.ai, Claude Desktop і мобільних застосунках.",
+	];
+	return (
+		<section id="claude-morkva" lang="uk" className="scroll-mt-20 rounded-2xl bg-muted/50 p-5 animate-enter sm:p-6">
+			<h2 className="text-xl font-semibold tracking-tight">Claude: підключення до цього Mailer</h2>
+			<p className="mt-2 text-[15px] leading-7 text-pretty text-foreground/80">
+				Вхід іде через PIN-хаб, а не через сторінку входу Mailer. Ключ API копіювати не треба.
+			</p>
+			<ol className="mt-4 flex flex-col gap-2.5">
+				{steps.map((step, index) => (
+					<li key={step} className="flex gap-3 text-[15px] leading-7 text-pretty text-foreground/80">
+						<span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-background font-mono text-xs text-muted-foreground tabular-nums">
+							{index + 1}
+						</span>
+						<span>{step}</span>
+					</li>
+				))}
+			</ol>
+			<BlockCode title="URL конектора" code={mcpUrl} className="mt-4" />
+			{isDrafts && (
+				<>
+					<h3 className="mt-6 font-semibold tracking-tight">Що Claude може</h3>
+					<ul className="mt-2 flex list-disc flex-col gap-1.5 pl-5 text-[15px] leading-7 text-pretty text-foreground/80">
+						<li>Читати розсилку, кампанії та їхні звіти, контакти, теги, поля, сегменти, огляд і щоденні підсумки.</li>
+						<li>Рахувати, скільки контактів підходить під будь-які умови, не зберігаючи сегмент (count_segment).</li>
+						<li>Створювати й редагувати чернетки кампаній (HTML, Markdown або текст), копіювати кампанії, завантажувати картинки.</li>
+					</ul>
+					<h3 className="mt-4 font-semibold tracking-tight">Чого не може</h3>
+					<p className="mt-2 text-[15px] leading-7 text-pretty text-foreground/80">
+						Відправляти й планувати кампанії, надсилати тестові листи, видаляти будь-що, міняти контакти, теги, поля й сегменти, керувати
+						ключами та доменами. Цих інструментів Claude навіть не бачить. Сегмент і відправку налаштовуєте ви в Mailer, на сторінці
+						чернетки.
+					</p>
+				</>
+			)}
+			<h3 className="mt-4 font-semibold tracking-tight">Приклади запитів</h3>
+			<ul className="mt-2 flex list-disc flex-col gap-1.5 pl-5 text-[15px] leading-7 text-pretty text-foreground/80">
+				<li>«Порівняй останні 5 кампаній: відкриття, кліки, відписки. Що спрацювало краще?»</li>
+				<li>«Скільки активних контактів із тегом product:… не відкривали листи понад 90 днів?»</li>
+				<li>«Створи чернетку кампанії з цим HTML, тема „…“, прехедер „…“»</li>
+			</ul>
+			<p className="mt-4 text-sm leading-6 text-pretty text-muted-foreground">
+				Відключити: сторінка API keys › Connected apps › Revoke, токени перестають працювати одразу. Підключення живе 90 днів після
+				останнього використання, далі Claude попросить Connect ще раз.
+			</p>
+			{isKeysLocal && (
+				<p className="mt-2 text-sm leading-6 text-pretty text-muted-foreground">
+					Claude Code, Codex і Cursor з ключем API (інструкції нижче) працюють лише на самому сервері, з адресою
+					http://127.0.0.1:3001/mailer/mcp. Ззовні MCP приймає тільки підключення через OAuth.
+				</p>
+			)}
+		</section>
 	);
 }
 
