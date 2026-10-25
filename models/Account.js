@@ -105,6 +105,13 @@ const accountSchema = new mongoose.Schema(
 			lastSentKey: { type: String },
 			lastSentAt: { type: Date },
 		},
+		// MailerLite, to import from (lib/mailerlite-import.js): its API token, encrypted with CREDENTIALS_ENCRYPTION_KEY and
+		// never read back to the page, and how the last import went.
+		mailerlite: {
+			token: { type: String, select: false },
+			tokenHint: { type: String },
+			lastImport: { type: mongoose.Schema.Types.Mixed },
+		},
 		// The fields its contacts can hold besides a first name and tags, shared by its newsletters (lib/contact-fields.js).
 		// Each contact keeps its values under fields.<key>; deleting a field here leaves them on the contacts.
 		contactFields: {

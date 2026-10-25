@@ -45,6 +45,8 @@ const campaignSchema = new mongoose.Schema(
 			restHours: { type: Number },
 		},
 		source: { type: String, default: "dashboard" },
+		// A past issue brought from another platform (lib/mailerlite-import.js): its id there, so importing again updates it.
+		externalId: { type: String },
 		scheduledAt: { type: Date },
 		startedAt: { type: Date },
 		// A send that doesn't go out at once: about when its last email goes, its first-send steps' checks or a new

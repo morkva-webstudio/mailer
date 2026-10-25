@@ -24,3 +24,32 @@ export async function revokeConnectedApp(id) {
 	revalidatePath("/api-keys");
 	return failure ? toFormError(failure) : { ok: true };
 }
+
+// MailerLite (lib/actions/imports.js): the token, what an import would bring, the import, and how it goes.
+export async function connectMailerlite(_state, formData) {
+	const { failure } = await runDashboardAction("connect_mailerlite", { token: String(formData.get("token") ?? "") });
+	if (failure) return toFormError(failure);
+	revalidatePath("/api-keys");
+	return { ok: true };
+}
+
+export async function disconnectMailerlite() {
+	const { failure } = await runDashboardAction("disconnect_mailerlite", {});
+	revalidatePath("/api-keys");
+	return failure ? toFormError(failure) : { ok: true };
+}
+
+export async function checkMailerlite() {
+	const { output, failure } = await runDashboardAction("check_mailerlite", {});
+	return failure ? toFormError(failure) : output;
+}
+
+export async function importFromMailerlite({ newsletterId, withCampaigns } = {}) {
+	const { failure } = await runDashboardAction("import_from_mailerlite", { newsletter: String(newsletterId ?? ""), campaigns: withCampaigns === true });
+	return failure ? toFormError(failure) : { ok: true };
+}
+
+export async function getMailerliteImport() {
+	const { output, failure } = await runDashboardAction("get_mailerlite_import", {});
+	return failure ? null : output.import;
+}

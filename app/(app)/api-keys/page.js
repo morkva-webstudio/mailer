@@ -3,6 +3,7 @@ import { ArrowUpRight, KeyRound } from "lucide-react";
 import { revokeApiKey } from "@/app/(app)/api-keys/actions";
 import BadgeStatus from "@/components/BadgeStatus";
 import ButtonRevoke from "@/components/ButtonRevoke";
+import CardMailerlite from "@/components/CardMailerlite";
 import DialogCreateApiKey from "@/components/DialogCreateApiKey";
 import GatePlan from "@/components/GatePlan";
 import HeaderPage from "@/components/HeaderPage";
@@ -26,6 +27,8 @@ import { getMcpClients, getMcpConnectors, getMcpUrl } from "@/lib/docs/mcp-clien
 import { formatDate, formatRelative } from "@/lib/format";
 import { listConnectedApps } from "@/lib/oauth";
 import { cn } from "@/lib/utils";
+import { scoped } from "@/lib/account-scope";
+import Newsletter from "@/models/Newsletter";
 
 export const metadata = { title: "API keys" };
 
@@ -34,7 +37,11 @@ const LEVEL_LABELS = { full: "Full access", signups: "Signups only" };
 export default async function ApiKeysPage() {
 	const { account } = await requireAccount();
 	await connectDb();
-	const [apiKeys, connectedApps] = await Promise.all([listApiKeys(account), listConnectedApps(account)]);
+	const [apiKeys, connectedApps, newsletters] = await Promise.all([
+		listApiKeys(account),
+		listConnectedApps(account),
+		Newsletter.find(scoped(account, {})).select({ name: 1 }).sort({ createdAt: 1 }).lean(),
+	]);
 	const appUrl = getAppUrl();
 
 	return (
@@ -104,6 +111,13 @@ export default async function ApiKeysPage() {
 					<h2 className="text-sm font-medium text-muted-foreground">Connected apps</h2>
 					<TableConnectedApps apps={connectedApps} mcpUrl={getMcpUrl(appUrl)} />
 				</section>
+
+				<CardMailerlite
+					isConnected={Boolean(account.mailerlite?.tokenHint)}
+					tokenHint={account.mailerlite?.tokenHint ?? ""}
+					newsletters={newsletters.map(({ _id, name }) => ({ id: String(_id), name }))}
+					lastImport={account.mailerlite?.lastImport ? JSON.parse(JSON.stringify(account.mailerlite.lastImport)) : null}
+				/>
 
 				<CardAgents agents={getAgentLinks(appUrl)} />
 			</div>
