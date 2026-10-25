@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { getLimiter, isLimitedInMemory, isRateLimited } from "../lib/rate-limit.js";
+import { getLimiter, isLimitedInMemory, isRateLimited, scaleRateLimit } from "../lib/rate-limit.js";
 
 delete process.env.UPSTASH_REDIS_REST_URL;
 delete process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -70,4 +70,11 @@ test("memory limits open again once the window has passed", () => {
 	assert.equal(isLimitedInMemory({ ...limits, key: "a" }, start + 1000), false);
 	assert.equal(isLimitedInMemory({ ...limits, key: "a" }, start + 2000), true);
 	assert.equal(isLimitedInMemory({ ...limits, key: "a" }, start + 10 * 60_000 + 1000), false);
+});
+
+test("API_RATE_LIMIT_SCALE multiplies a limit, and anything but a positive number leaves it as it is", () => {
+	const limit = { name: "api-requests", limit: 300, window: "1 m" };
+	assert.deepEqual(scaleRateLimit(limit, { API_RATE_LIMIT_SCALE: "2" }), { ...limit, limit: 600 });
+	assert.deepEqual(scaleRateLimit({ ...limit, limit: 3 }, { API_RATE_LIMIT_SCALE: "0.1" }), { ...limit, limit: 1 });
+	for (const value of [undefined, "", "0", "-1", "lots"]) assert.equal(scaleRateLimit(limit, { API_RATE_LIMIT_SCALE: value }), limit);
 });
