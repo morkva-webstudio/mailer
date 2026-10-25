@@ -1,8 +1,9 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import { getAuth } from "@/lib/auth";
+import { getAuth, getAuthCallContext } from "@/lib/auth";
 import { withBasePath } from "@/lib/base-path";
 import { getAppUrl, isEmailAllowed } from "@/lib/config";
+import { isExpiredOAuthQuery, pickSignedOAuthQuery, readOAuthQueryField } from "@/lib/oauth-rules";
 import { normalizeEmail, toSafeNextPath } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +11,8 @@ export const dynamic = "force-dynamic";
 // A server behind a gateway of its own (a PIN hub) signs people in there instead of with emailed codes: the hub sends
 // them here with a ticket it signed with HUB_BRIDGE_SECRET, good for a minute and once. The session comes from a code
 // made here and never sent, so the allowlist and the first sign-in's account work as with any code. Without the
-// secret this route doesn't exist.
+// secret this route doesn't exist. An app connecting with OAuth (Claude) sends people to sign-in with its signed
+// request, which the hub passes on in the ticket (oauth): signing in then goes on to the consent page, as a code would.
 const TICKET_TTL_MS = 60 * 1000;
 const usedNonces = new Map();
 
@@ -40,13 +42,14 @@ function checkTicket(value, secret) {
 	const ticket = readTicket(value, secret);
 	const email = normalizeEmail(ticket?.email);
 	const isFresh = Number.isFinite(ticket?.exp) && ticket.exp > now && ticket.exp <= now + TICKET_TTL_MS;
-	if (email && isFresh && spendNonce(ticket.nonce, now) && isEmailAllowed(email)) return { email, next: ticket.next };
+	if (email && isFresh && spendNonce(ticket.nonce, now) && isEmailAllowed(email)) return { email, next: ticket.next, oauthQuery: readOAuthQueryField(pickSignedOAuthQuery(ticket.oauth ?? "")) };
 	console.warn(`[hub-login] Refused a ticket${email ? ` for ${email}` : ""}`);
 	return null;
 }
 
-function redirectTo(path) {
-	const response = NextResponse.redirect(new URL(withBasePath(path), getAppUrl()), 303);
+// A path in the app, or where Better Auth sends an OAuth sign-in on (its pages have the base path already).
+function redirectTo(path, { hasBasePath = false } = {}) {
+	const response = NextResponse.redirect(new URL(hasBasePath ? path : withBasePath(path), getAppUrl()), 303);
 	response.headers.set("Cache-Control", "no-store");
 	return response;
 }
@@ -57,12 +60,26 @@ export async function GET(request) {
 
 	const ticket = checkTicket(new URL(request.url).searchParams.get("ticket"), secret);
 	if (!ticket) return new NextResponse("This sign-in link is invalid or expired.", { status: 403, headers: { "Cache-Control": "no-store" } });
-	const { email } = ticket;
+	const { email, oauthQuery } = ticket;
 
 	const auth = await getAuth();
-	const otp = await auth.api.createVerificationOTP({ body: { email, type: "sign-in" } });
-	const { headers } = await auth.api.signInEmailOTP({ body: { email, otp }, headers: request.headers, returnHeaders: true });
-	const response = redirectTo(toSafeNextPath(ticket.next));
+	const signIn = async (oauth_query) => {
+		const otp = await auth.api.createVerificationOTP({ body: { email, type: "sign-in" } });
+		// Signing in on to an app's consent needs the request, as on the sign-in page.
+		const context = oauth_query ? await getAuthCallContext("/sign-in/email-otp") : { headers: request.headers };
+		return auth.api.signInEmailOTP({ body: { email, otp, ...(oauth_query && { oauth_query }) }, ...context, returnHeaders: true });
+	};
+	let signedIn;
+	try {
+		signedIn = await signIn(oauthQuery);
+	} catch (error) {
+		// A request over 10 minutes old: signed in all the same, the app has to connect again.
+		if (!oauthQuery || !isExpiredOAuthQuery(error)) throw error;
+		signedIn = await signIn(null);
+	}
+	const { headers } = signedIn;
+	const oauthNext = oauthQuery ? signedIn.response?.url : null;
+	const response = oauthNext ? redirectTo(oauthNext, { hasBasePath: true }) : redirectTo(toSafeNextPath(ticket.next));
 	for (const cookie of headers.getSetCookie()) response.headers.append("Set-Cookie", cookie);
 	console.info(`[hub-login] Signed in ${email}`);
 	return response;
