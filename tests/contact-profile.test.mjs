@@ -179,6 +179,32 @@ describe("contact fields and tags", () => {
 		assert.match(checkSegmentRules({ conditions: [{ field: "fields.colour", op: "is", value: "red" }] }, { fields: FIELDS }).problem, /no such field/);
 		assert.match(checkSegmentRules({ conditions: [{ field: "fields.seats", op: "contains", value: "1" }] }, { fields: FIELDS }).problem, /takes at_least/);
 	});
+
+	test("a date field's days count back from the moment the segment is used, and a contact without the date meets neither", () => {
+		const checked = checkSegmentRules(
+			{
+				conditions: [
+					{ field: "fields.birthday", op: "within", value: "30" },
+					{ field: "fields.birthday", op: "not_within", value: 365 },
+				],
+			},
+			{ fields: FIELDS }
+		);
+		assert.ok(checked.rules, checked.problem);
+		const now = new Date("2026-10-25T12:00:00Z");
+		assert.deepEqual(compileSegment(checked.rules, { now }).$and, [
+			{ "fields.birthday": { $gte: new Date("2026-09-25T12:00:00Z") } },
+			{ "fields.birthday": { $lt: new Date("2025-10-25T12:00:00Z") } },
+		]);
+		const later = compileSegment(checked.rules, { now: new Date("2026-10-26T12:00:00Z") }).$and[1];
+		assert.deepEqual(later, { "fields.birthday": { $lt: new Date("2025-10-26T12:00:00Z") } });
+		assert.equal(describeSegment(checked.rules, FIELDS), "Birthday in the last 30 days and birthday more than 365 days ago");
+		assert.match(
+			checkSegmentRules({ conditions: [{ field: "fields.birthday", op: "within", value: 0 }] }, { fields: FIELDS }).problem,
+			/a whole number of days/
+		);
+		assert.match(checkSegmentRules({ conditions: [{ field: "fields.seats", op: "within", value: 30 }] }, { fields: FIELDS }).problem, /takes at_least/);
+	});
 });
 
 describe("importing and exporting profiles", () => {
