@@ -20,6 +20,7 @@ function fullForm(section) {
 		fromName: "Jane",
 		fromEmail: "jane@example.com",
 		replyTo: "reply@example.com",
+		language: "uk",
 		postalAddress: "1 Main St, Paris",
 		archiveEnabled: "on",
 		description: "One idea a week.",
@@ -53,6 +54,7 @@ test("a section's page sends its own fields only, so saving it leaves the other 
 		fromName: "Jane",
 		fromEmail: "jane@example.com",
 		replyTo: "reply@example.com",
+		language: "uk",
 		postalAddress: "1 Main St, Paris",
 	});
 	assert.deepEqual(readSettingsForm(fullForm("cleanup")), { cleanup: { enabled: true, issues: 8, days: null } });

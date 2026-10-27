@@ -17,8 +17,12 @@ export const MESSAGE_STATUSES = [
 
 const messageSchema = new mongoose.Schema(
 	{
-		kind: { type: String, enum: ["campaign", "last-chance", "welcome", "confirmation", "test"], required: true },
+		kind: { type: String, enum: ["campaign", "last-chance", "welcome", "confirmation", "test", "automation"], required: true },
 		campaignId: { type: mongoose.Schema.Types.ObjectId, ref: "Campaign" },
+		// An automation's email: the automation, its email and the contact's pass that sent it.
+		automationId: { type: mongoose.Schema.Types.ObjectId, ref: "Automation" },
+		automationEmailId: { type: mongoose.Schema.Types.ObjectId, ref: "AutomationEmail" },
+		runId: { type: mongoose.Schema.Types.ObjectId, ref: "AutomationRun" },
 		newsletterId: { type: mongoose.Schema.Types.ObjectId, ref: "Newsletter", required: true },
 		contactId: { type: mongoose.Schema.Types.ObjectId, ref: "Contact" },
 		email: { type: String, required: true, lowercase: true, trim: true },
@@ -63,6 +67,12 @@ messageSchema.index({ newsletterId: 1, sentAt: 1 });
 messageSchema.index({ campaignId: 1, status: 1 });
 // Emails still waiting to go out, which the plan check counts before a new send.
 messageSchema.index({ accountId: 1, campaignId: 1 }, { partialFilterExpression: { status: "queued" } });
+// An automation's emails and their stats, and one email per contact's pass at each Send email step.
+messageSchema.index({ accountId: 1, automationId: 1, automationEmailId: 1 }, { partialFilterExpression: { kind: "automation" } });
+messageSchema.index(
+	{ runId: 1, automationEmailId: 1 },
+	{ unique: true, partialFilterExpression: { kind: "automation" } }
+);
 // The account-level check on the last days of sends (lib/account-health.js).
 messageSchema.index({ accountId: 1, sentAt: -1 });
 

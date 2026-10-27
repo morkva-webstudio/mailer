@@ -11,6 +11,8 @@ const newsletterSchema = new mongoose.Schema(
 		fromName: { type: String, trim: true },
 		fromEmail: { type: String, required: true, lowercase: true, trim: true },
 		replyTo: { type: String, lowercase: true, trim: true },
+		// The words its emails add around their content (lib/email-language.js). Unset: the server's default.
+		language: { type: String },
 		// Without one, emails print the server's default (lib/postal-address.js), unless the owner saved it empty.
 		postalAddress: { type: String, trim: true },
 		postalAddressCleared: { type: Boolean },

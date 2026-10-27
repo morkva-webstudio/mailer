@@ -14,7 +14,7 @@ import { runWithRequest } from "./stubs/next-headers.mjs";
 // button saves the choice in a cookie, which the layout reads to render the next page's sidebar the same way.
 const USER = { name: "Ada", email: "ada@example.com", image: null };
 const ACCOUNT = { _id: "6ad8aca8d652cc82ddbb1086", status: "active" };
-const LINKS = ["Overview", "Campaigns", "Contacts", "Settings", "Domains", "API keys"];
+const LINKS = ["Overview", "Campaigns", "Automations", "Contacts", "Settings", "Domains", "API keys"];
 
 async function findSidebarProps(cookie) {
 	const jar = new Map(cookie === undefined ? [] : [[SIDEBAR_COOKIE, cookie]]);

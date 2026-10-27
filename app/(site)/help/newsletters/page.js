@@ -60,6 +60,10 @@ export default function NewslettersPage() {
 					<strong>Reply-to</strong>: where replies go.{sharedDomain && " Left empty, replies to the shared address go to your account's email."}
 				</li>
 				<li>
+					<strong>Emails&apos; language</strong>: the words every email adds around yours, its footer and Read online link, in English or
+					Ukrainian. An automation&apos;s email can pick its own.
+				</li>
+				<li>
 					<strong>Postal address</strong>: printed in the footer of every email, as anti-spam laws ask.{" "}
 					{isCloud()
 						? "Until you set yours, emails print MailCheap's business address. Saved empty, emails wait until you add one."

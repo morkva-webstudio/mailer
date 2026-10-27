@@ -18,6 +18,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { CLEANUP_LIMITS, LAST_CHANCE_DAYS, getCleanupSettings } from "@/lib/cleanup";
 import { CONFIRM_URL_PLACEHOLDER } from "@/lib/confirmation-content";
+import { EMAIL_LANGUAGE_OPTIONS } from "@/lib/email-language";
 import { formatNumber } from "@/lib/format";
 import { KEEP_URL_PLACEHOLDER, getLastChanceContent } from "@/lib/last-chance-content";
 import { fillSampleName } from "@/lib/merge-tags";
@@ -290,6 +291,21 @@ function SectionSender({ draft, set, update, domains, sharedDomain, fromEmail, d
 			<Field label="Reply-to">
 				<Input name="replyTo" type="email" value={draft.replyTo} placeholder="Optional" onChange={update("replyTo")} />
 			</Field>
+			<Field as="div" label="Emails' language" hint="The footer and the Read online link of every email, in this language.">
+				<Select value={draft.language} onValueChange={(value) => set("language", value)}>
+					<SelectTrigger aria-label="Emails' language" className="w-48">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						{EMAIL_LANGUAGE_OPTIONS.map(({ id, label }) => (
+							<SelectItem key={id} value={id}>
+								{label}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+				<input type="hidden" name="language" value={draft.language} />
+			</Field>
 			<Field
 				label="Postal address"
 				htmlFor={POSTAL_ADDRESS_ID}
@@ -335,7 +351,7 @@ function SectionSender({ draft, set, update, domains, sharedDomain, fromEmail, d
 // Until it's edited, the built-in confirmation email follows the name and the description. Turned on while the welcome
 // email goes out, it says that saving turns the welcome email off (readSettingsForm sends both).
 function SectionSignups({ draft, setDraft, set, newsletter, sender, contactFields, isCloud, review }) {
-	const { name, description, confirmationEdits, isConfirmationRequired, postalAddress } = draft;
+	const { name, description, confirmationEdits, isConfirmationRequired, postalAddress, language } = draft;
 	const isWelcomeReplaced = isConfirmationRequired && !newsletter.requireConfirmation && Boolean(newsletter.welcome?.enabled);
 	const confirmation = useMemo(
 		() => getDraftConfirmation({ name, description, confirmationEdits }, newsletter),
@@ -345,12 +361,12 @@ function SectionSignups({ draft, setDraft, set, newsletter, sender, contactField
 	const html = useMemo(
 		() =>
 			fillSampleName(
-				renderEmail({ ...deferredConfirmation, newsletter: { name, postalAddress, theme: newsletter.theme } })
+				renderEmail({ ...deferredConfirmation, newsletter: { name, postalAddress, theme: newsletter.theme, language } })
 					.html.replaceAll(UNSUBSCRIBE_PLACEHOLDER, "#")
 					.replaceAll(CONFIRM_URL_PLACEHOLDER, "#"),
 				{ isHtml: true, contactFields }
 			),
-		[deferredConfirmation, name, postalAddress, newsletter.theme, contactFields]
+		[deferredConfirmation, name, postalAddress, newsletter.theme, language, contactFields]
 	);
 
 	function updateConfirmation(key) {
@@ -422,7 +438,7 @@ function SectionWelcome({ draft, setDraft, newsletter, sender, contactFields, is
 	const paywall = usePaywall();
 	const hasPlan = paywall?.hasPlan ?? true;
 	const [isTesting, startTesting] = useTransition();
-	const { name, postalAddress, isWelcomeEnabled, welcome } = draft;
+	const { name, postalAddress, isWelcomeEnabled, welcome, language } = draft;
 	const isConfirmationOn = Boolean(newsletter.requireConfirmation);
 	const deferredWelcome = useDeferredValue(welcome);
 	const html = useMemo(
@@ -432,11 +448,11 @@ function SectionWelcome({ draft, setDraft, newsletter, sender, contactFields, is
 					markdown: deferredWelcome.markdown,
 					subject: deferredWelcome.subject,
 					previewText: deferredWelcome.previewText,
-					newsletter: { name, postalAddress, theme: newsletter.theme },
+					newsletter: { name, postalAddress, theme: newsletter.theme, language },
 				}).html.replaceAll(UNSUBSCRIBE_PLACEHOLDER, "#"),
 				{ isHtml: true, contactFields }
 			),
-		[deferredWelcome, name, postalAddress, newsletter.theme, contactFields]
+		[deferredWelcome, name, postalAddress, newsletter.theme, language, contactFields]
 	);
 
 	function updateWelcome(key) {
@@ -519,13 +535,13 @@ function SectionWelcome({ draft, setDraft, newsletter, sender, contactFields, is
 }
 
 function SectionCleanup({ draft, setDraft, set, newsletter, sender, fromEmail, totals }) {
-	const { name, postalAddress, isCleanupEnabled, cleanup } = draft;
+	const { name, postalAddress, isCleanupEnabled, cleanup, language } = draft;
 	const savedCleanup = getCleanupSettings(newsletter);
 	const lastChance = useMemo(() => {
 		const content = getLastChanceContent({ name, fromEmail });
-		const { html } = renderEmail({ ...content, newsletter: { name, postalAddress, theme: newsletter.theme } });
+		const { html } = renderEmail({ ...content, newsletter: { name, postalAddress, theme: newsletter.theme, language } });
 		return { ...content, html: html.replaceAll(UNSUBSCRIBE_PLACEHOLDER, "#").replaceAll(KEEP_URL_PLACEHOLDER, "#") };
-	}, [name, fromEmail, postalAddress, newsletter.theme]);
+	}, [name, fromEmail, postalAddress, newsletter.theme, language]);
 
 	function updateCleanup(key) {
 		return (event) => {

@@ -281,7 +281,7 @@ function TextMatchCount({ count, isCounting }) {
 }
 
 // With one condition, all and any pick the same contacts, so it only shows from two.
-function ToggleMatch({ value, onChange }) {
+export function ToggleMatch({ value, onChange }) {
 	return (
 		<div role="radiogroup" aria-label="Match" className="flex gap-1 self-start rounded-lg bg-muted p-0.5 animate-enter">
 			{MATCHES.map(({ id, label }) => (
@@ -304,7 +304,7 @@ function ToggleMatch({ value, onChange }) {
 }
 
 // fields: the account's own, after the built-in ones; tags: the newsletter's tag names, offered for tag conditions.
-function RowCondition({ condition, fields, tags, onChange, onRemove }) {
+export function RowCondition({ condition, fields, tags, onChange, onRemove }) {
 	const field = getSegmentField(condition.field, fields);
 	const removeButton = (
 		<Button type="button" variant="ghost" size="icon-sm" aria-label="Remove the condition" onClick={onRemove} className="shrink-0 text-muted-foreground">
@@ -503,12 +503,12 @@ function startValue(kind, tags = []) {
 	return START_VALUES[kind];
 }
 
-function withKey(condition, key = crypto.randomUUID()) {
+export function withKey(condition, key = crypto.randomUUID()) {
 	return { ...condition, key };
 }
 
 const START_VALUES = { days: 30, count: 3, source: "website", text: "", number: 0 };
-const NEW_CONDITION = { field: "opened", op: "within", value: 30 };
+export const NEW_CONDITION = { field: "opened", op: "within", value: 30 };
 const MATCHES = [
 	{ id: "all", label: "Meets all" },
 	{ id: "any", label: "Meets any" },
