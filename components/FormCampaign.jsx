@@ -25,6 +25,7 @@ import CardSettings from "@/components/CardSettings";
 import CardTips from "@/components/CardTips";
 import DialogDiscardCampaign from "@/components/DialogDiscardCampaign";
 import DialogPreviewEmail from "@/components/DialogPreviewEmail";
+import EditorHtml from "@/components/EditorHtml";
 import EditorRich from "@/components/EditorRich";
 import IconField from "@/components/IconField";
 import LinkHelpFields from "@/components/LinkHelpFields";
@@ -413,15 +414,7 @@ export default function FormCampaign({
 						</div>
 						{isHtml ? (
 							<div className="relative">
-								<span className="pointer-events-none absolute top-3 right-4 text-xs text-muted-foreground">HTML</span>
-								<textarea
-									value={values.body}
-									onChange={update("body")}
-									placeholder="<html>"
-									spellCheck={false}
-									aria-label="Content"
-									className="block min-h-[560px] w-full resize-none bg-transparent px-4 py-4 font-mono text-[13px] leading-6 outline-none [field-sizing:content] placeholder:text-muted-foreground"
-								/>
+								<EditorHtml value={values.body} onChange={updateBody} />
 							</div>
 						) : (
 							<EditorRich content={initialBody} onChange={updateBody} contactFields={contactFields} />

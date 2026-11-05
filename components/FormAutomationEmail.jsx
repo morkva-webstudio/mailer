@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronLeft, Eye } from "lucide-react";
 import { saveAutomationEmail } from "@/app/(app)/automations/actions";
 import DialogPreviewEmail from "@/components/DialogPreviewEmail";
+import EditorHtml from "@/components/EditorHtml";
 import EditorRich from "@/components/EditorRich";
 import RowCampaign from "@/components/RowCampaign";
 import StatusSaved from "@/components/StatusSaved";
@@ -81,14 +82,7 @@ export default function FormAutomationEmail({ automationId, email, newsletter, c
 					</RowCampaign>
 				</div>
 				{isHtml ? (
-					<textarea
-						value={values.body}
-						onChange={update("body")}
-						placeholder="<html>"
-						spellCheck={false}
-						aria-label="Content"
-						className="block min-h-[560px] w-full resize-none bg-transparent px-4 py-4 font-mono text-[13px] leading-6 outline-none [field-sizing:content] placeholder:text-muted-foreground"
-					/>
+					<EditorHtml value={values.body} onChange={updateBody} />
 				) : (
 					<EditorRich content={initialBody} onChange={updateBody} contactFields={contactFields} />
 				)}
