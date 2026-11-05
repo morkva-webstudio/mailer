@@ -69,6 +69,14 @@ export async function saveSignupForm(newsletterId, signupForm) {
 	return { ok: true, signupForm: output.signupForm };
 }
 
+// Unsubscribe page (FormUnsubscribePage): its switch, picture and the lines of the languages it changed.
+export async function saveUnsubscribePage(newsletterId, unsubscribePage) {
+	const { output, failure } = await runDashboardAction("update_newsletter", { id: String(newsletterId ?? ""), unsubscribePage });
+	if (failure) return toFormError(failure);
+	revalidatePath(SETTINGS_PATH, "layout");
+	return { ok: true, unsubscribePage: output.unsubscribePage };
+}
+
 // Design (FormTheme): a preset alone applies it as it comes; the customizer sends a theme's full values.
 export async function saveTheme(newsletterId, theme) {
 	const { output, failure } = await runDashboardAction("update_newsletter", { id: String(newsletterId ?? ""), theme });

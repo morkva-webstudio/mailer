@@ -30,6 +30,12 @@ const contactSchema = new mongoose.Schema(
 		subscribedAt: { type: Date, default: Date.now },
 		confirmedAt: { type: Date },
 		unsubscribedAt: { type: Date },
+		// Why they left, as they answered on the unsubscribe page after their last unsubscribe (lib/unsubscribe-page.js).
+		unsubscribeReason: {
+			code: { type: String },
+			text: { type: String, trim: true },
+			at: { type: Date },
+		},
 		lastSentAt: { type: Date },
 		lastOpenAt: { type: Date },
 		lastClickAt: { type: Date },

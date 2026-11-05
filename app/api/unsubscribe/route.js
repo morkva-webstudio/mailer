@@ -3,6 +3,8 @@ import { connectDb } from "@/lib/db";
 import { getClientIp, isRateLimited } from "@/lib/rate-limit";
 import { moveContact } from "@/lib/status-changes";
 import { verifyUnsubscribeToken } from "@/lib/unsubscribe";
+import { readUnsubscribeReason } from "@/lib/unsubscribe-page";
+import Contact from "@/models/Contact";
 import Campaign from "@/models/Campaign";
 import Message from "@/models/Message";
 import { withBasePath } from "@/lib/base-path";
@@ -48,7 +50,8 @@ async function unsubscribe({ contactId, newsletterId }, via) {
 			to: "unsubscribed",
 			via,
 			at,
-			update: { $set: { unsubscribedAt: at } },
+			// A reason given after an earlier unsubscribe isn't this one's.
+			update: { $set: { unsubscribedAt: at }, $unset: { unsubscribeReason: 1 } },
 			options: { crossAccount: true, projection: { _id: 1, accountId: 1 } },
 		}
 	);
@@ -58,6 +61,15 @@ async function unsubscribe({ contactId, newsletterId }, via) {
 	await creditLatestCampaign({ accountId: previous.accountId, contactId, newsletterId }).catch((error) =>
 		console.error("[unsubscribe] Could not credit the campaign:", error.message)
 	);
+}
+
+// The page's question after unsubscribing: kept only while they're unsubscribed, the last answer wins.
+async function saveReason({ contactId, newsletterId }, reason) {
+	await connectDb();
+	await Contact.updateOne(
+		{ _id: contactId, newsletterId, status: "unsubscribed" },
+		{ $set: { unsubscribeReason: { ...reason, at: new Date() } } }
+	).setOptions({ crossAccount: true });
 }
 
 function redirectToPage(request, params) {
@@ -75,11 +87,12 @@ export function GET(request) {
 	return redirectToPage(request, { token: new URL(request.url).searchParams.get("token") });
 }
 
-// RFC 8058 one-click endpoint. The confirmation page form posts here too, with source=page.
+// RFC 8058 one-click endpoint. The page's forms post here too: source=page to unsubscribe, source=reason with why.
 export async function POST(request) {
 	const token = new URL(request.url).searchParams.get("token");
 	const form = await request.formData().catch(() => null);
-	const isPageForm = form?.get("source") === "page";
+	const source = form?.get("source");
+	const isPageForm = source === "page" || source === "reason";
 
 	function respond(status, pageStatus) {
 		if (!isPageForm) return new NextResponse(null, { status, headers: NO_STORE });
@@ -93,6 +106,18 @@ export async function POST(request) {
 
 	const reference = verifyUnsubscribeToken(token);
 	if (!reference) return respond(400, "invalid");
+
+	if (source === "reason") {
+		const reason = readUnsubscribeReason(String(form.get("reason") ?? ""), form.get("text"));
+		if (!reason) return respond(400, "done");
+		try {
+			await saveReason(reference, reason);
+			return respond(200, "thanks");
+		} catch (error) {
+			console.error("[unsubscribe] Could not save the reason:", error);
+			return respond(500, "thanks");
+		}
+	}
 
 	try {
 		await unsubscribe(reference, isPageForm ? "link" : "mail-app");

@@ -1,10 +1,10 @@
-import { AtSign, BrushCleaning, CodeXml, Globe, Hand, MailCheck, Palette } from "lucide-react";
+import { AtSign, BrushCleaning, CodeXml, Globe, Hand, MailCheck, MailX, Palette } from "lucide-react";
 import AvatarNewsletter from "@/components/AvatarNewsletter";
 import CardSettingsSection from "@/components/CardSettingsSection";
 import HeaderPage from "@/components/HeaderPage";
 import LayoutNarrow from "@/components/LayoutNarrow";
 import RedirectSettingsField from "@/components/RedirectSettingsField";
-import { DESIGN_SECTION, FORM_SECTION, SETTINGS_SECTIONS, getSectionPath } from "@/lib/newsletter-sections";
+import { DESIGN_SECTION, FORM_SECTION, SETTINGS_SECTIONS, UNSUBSCRIBE_SECTION, getSectionPath } from "@/lib/newsletter-sections";
 import { getSettingsPage } from "@/lib/settings-page";
 import { getDesignSummary, getSettingsSummary } from "@/lib/settings-summary";
 import { getThemeSummary } from "@/lib/themes";
@@ -46,12 +46,21 @@ export default async function SettingsPage() {
 				</li>
 				<li>
 					<CardSettingsSection
+						href={getSectionPath(UNSUBSCRIBE_SECTION.id)}
+						icon={MailX}
+						label={UNSUBSCRIBE_SECTION.label}
+						state={summary.unsubscribe}
+						stagger={SETTINGS_SECTIONS.length + 2}
+					/>
+				</li>
+				<li>
+					<CardSettingsSection
 						href={getSectionPath(DESIGN_SECTION.id)}
 						icon={Palette}
 						label={DESIGN_SECTION.label}
 						state={design}
 						swatches={design.swatches}
-						stagger={SETTINGS_SECTIONS.length + 2}
+						stagger={SETTINGS_SECTIONS.length + 3}
 					/>
 				</li>
 			</ul>

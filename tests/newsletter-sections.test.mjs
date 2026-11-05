@@ -151,6 +151,7 @@ test("the overview says where each section stands", () => {
 		cleanup: { text: "On · after 8 ignored issues", tone: "on" },
 		website: { text: "Live · field-notes.mailcheap.ai", tone: "on" },
 		form: { text: "Off", tone: "off" },
+		unsubscribe: { text: "Built-in text · asks why", tone: "none" },
 	});
 
 	const plain = { ...newsletter, requireConfirmation: false, welcome: { enabled: false }, cleanup: { enabled: false }, archiveEnabled: false };

@@ -1,6 +1,14 @@
 import mongoose from "mongoose";
 import { accountScoped } from "../lib/account-scope.js";
 import { contentReviewSchema } from "../lib/content-review-schema.js";
+import { EMAIL_LANGUAGE_IDS } from "../lib/email-language.js";
+import { UNSUBSCRIBE_TEXT_KEYS } from "../lib/unsubscribe-page.js";
+
+// One language's lines of the unsubscribe page that differ from the built-in text (lib/unsubscribe-page.js).
+const unsubscribeTextsSchema = new mongoose.Schema(
+	Object.fromEntries(UNSUBSCRIBE_TEXT_KEYS.map((key) => [key, { type: String, trim: true }])),
+	{ _id: false }
+);
 
 const newsletterSchema = new mongoose.Schema(
 	{
@@ -95,6 +103,12 @@ const newsletterSchema = new mongoose.Schema(
 			buttonText: { type: String, trim: true },
 			placeholder: { type: String, trim: true },
 			allowedDomains: { type: [String], default: undefined },
+		},
+		// The page its emails' unsubscribe link opens (lib/unsubscribe-page.js): whether it asks why, and its own lines.
+		unsubscribePage: {
+			askReason: { type: Boolean },
+			imageUrl: { type: String, trim: true },
+			texts: Object.fromEntries(EMAIL_LANGUAGE_IDS.map((language) => [language, { type: unsubscribeTextsSchema, default: undefined }])),
 		},
 		// Dashboard helpers its owner closed: ownDomain, the step the own-domain helper suggested (lib/sender-rules.js).
 		dismissedNudges: {
